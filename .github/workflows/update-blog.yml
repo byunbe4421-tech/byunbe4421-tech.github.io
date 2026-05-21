@@ -14,13 +14,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: RSS 읽어서 누적 업데이트
+      - name: 나무결상점 업데이트
         run: python3 update.py
+
+      - name: 온라인마케팅연구소 업데이트
+        run: python3 update_matjiyeo.py
 
       - name: 변경사항 저장
         run: |
           git config user.name 'GitHub Actions'
           git config user.email 'actions@github.com'
-          git add index.html
+          git add index.html matjiyeo/index.html
           git diff --staged --quiet || git commit -m '블로그 자동 업데이트'
           git push
