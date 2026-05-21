@@ -34,9 +34,9 @@ items = channel.findall('item')
 new_posts = []
 for item in items:
     title = item.find('title').text or ''
-    link = item.find('link').text or ''
+    link = item.find('guid').text or ''
     if not link:
-        link = item.find('guid').text or ''
+        link = item.find('link').text or ''
     if title and link:
         new_posts.append((title.strip(), link.strip()))
 
