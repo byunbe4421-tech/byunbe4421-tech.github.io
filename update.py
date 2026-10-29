@@ -4,13 +4,17 @@ import datetime
 import re
 import os
 
+def clean_url(url):
+    # RSS 추적 꼬리표(?fromRss=true&trackingCode=rss)를 떼어 글 원래 주소만 남긴다
+    return url.split('?')[0].strip()
+
 existing_posts = []
 if os.path.exists('index.html'):
     with open('index.html', 'r', encoding='utf-8') as f:
         content = f.read()
     links = re.findall(r'href="(https://blog\.naver\.com/byunbe/[^"]+)"', content)
     titles = re.findall(r'href="https://blog\.naver\.com/byunbe/[^"]+">([^<]+)</a>', content)
-    existing_posts = list(zip(titles, links))
+    existing_posts = [(t, clean_url(l)) for t, l in zip(titles, links)]
 
 rss_url = 'https://rss.blog.naver.com/byunbe'
 req = urllib.request.Request(rss_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -27,8 +31,16 @@ for item in items:
     if not link:
         link = item.find('guid').text or ''
     if title and link:
-        new_posts.append((title.strip(), link.strip()))
+        new_posts.append((title.strip(), clean_url(link)))
 
+# 꼬리표를 떼면 같은 글이 두 번 들어 있을 수 있어 중복을 한 번 걸러 낸다(앞쪽 = 최신 유지)
+seen = set()
+deduped = []
+for t, l in existing_posts:
+    if l not in seen:
+        seen.add(l)
+        deduped.append((t, l))
+existing_posts = deduped
 existing_urls = [p[1] for p in existing_posts]
 added = 0
 for title, link in new_posts:
@@ -53,6 +65,7 @@ html = (
     '  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
     '  <title>나무결상점 - 건축자재 인테리어 정보</title>\n'
     '  <meta name="description" content="건축과 인테리어, 궁금할 땐 여기!">\n'
+    '  <link rel="canonical" href="https://byunbe4421-tech.github.io/">\n'
     '  <style>\n'
     '    body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f9f9f9; color: #333; }\n'
     '    header { text-align: center; padding: 40px 0 20px; border-bottom: 2px solid #4a90a4; margin-bottom: 30px; }\n'
@@ -86,5 +99,28 @@ html = (
 
 with open('index.html', 'w', encoding='utf-8') as f:
     f.write(html)
+
+# sitemap.xml(우리 사이트 주소만 인정됨)과 robots.txt — 구글이 사이트맵 위치를 알도록
+today = datetime.date.today().isoformat()
+with open('sitemap.xml', 'w', encoding='utf-8') as f:
+    f.write(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        '  <url>\n'
+        '    <loc>https://byunbe4421-tech.github.io/</loc>\n'
+        '    <lastmod>' + today + '</lastmod>\n'
+        '    <changefreq>daily</changefreq>\n'
+        '    <priority>1.0</priority>\n'
+        '  </url>\n'
+        '  <url>\n'
+        '    <loc>https://byunbe4421-tech.github.io/matjiyeo/</loc>\n'
+        '    <lastmod>' + today + '</lastmod>\n'
+        '    <changefreq>daily</changefreq>\n'
+        '    <priority>0.9</priority>\n'
+        '  </url>\n'
+        '</urlset>\n'
+    )
+with open('robots.txt', 'w', encoding='utf-8') as f:
+    f.write('User-agent: *\nAllow: /\n\nSitemap: https://byunbe4421-tech.github.io/sitemap.xml\n')
 
 print('완료! 새 글 ' + str(added) + '개 추가, 전체 ' + str(total) + '개')
