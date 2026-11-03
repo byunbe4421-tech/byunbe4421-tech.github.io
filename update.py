@@ -10,8 +10,11 @@ import os
 import time
 
 def clean_url(url):
-    # RSS 추적 꼬리표(?fromRss=true&trackingCode=rss)를 떼어 글 원래 주소만 남긴다
-    return url.split('?')[0].strip()
+    # RSS 추적 꼬리표(?fromRss=true&trackingCode=rss)를 떼고, 글 주소를 모바일 형식으로 통일한다.
+    # PC 주소(blog.naver.com)는 구글 스마트폰 봇에게 본문 없이 리다이렉트만 주고,
+    # 모바일 주소(m.blog.naver.com)는 본문 전체를 주기 때문이다(2026-11-03 실측).
+    u = url.split('?')[0].strip()
+    return re.sub(r'^https://(?:m\.)?blog\.naver\.com/', 'https://m.blog.naver.com/', u)
 
 def make_summary(text, title=''):
     # 글 앞부분에서 인사말·제목 반복을 빼고 150자 안쪽 요약 한두 문장을 만든다
@@ -57,8 +60,8 @@ existing_posts = []
 if os.path.exists('index.html'):
     with open('index.html', 'r', encoding='utf-8') as f:
         content = f.read()
-    links = re.findall(r'href="(https://blog\.naver\.com/byunbe/[^"]+)"', content)
-    titles = re.findall(r'href="https://blog\.naver\.com/byunbe/[^"]+">([^<]+)</a>', content)
+    links = re.findall(r'href="(https://(?:m\.)?blog\.naver\.com/byunbe/[^"]+)"', content)
+    titles = re.findall(r'href="https://(?:m\.)?blog\.naver\.com/byunbe/[^"]+">([^<]+)</a>', content)
     existing_posts = [(htmllib.unescape(t), clean_url(l)) for t, l in zip(titles, links)]
 
 rss_url = 'https://rss.blog.naver.com/byunbe'
